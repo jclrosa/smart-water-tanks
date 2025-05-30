@@ -1,0 +1,391 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block title %}{{ tank.name }} - Smart Water Tanks{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">{{ tank.name }}</h1>
+                <p class="mt-2 text-gray-600">{{ tank.location }}</p>
+            </div>
+            <div class="flex space-x-3">
+                <a href="{% url 'dashboard:export_tank_data' tank.pk %}" 
+                   class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    <i class="fas fa-download mr-2"></i>Export Data
+                </a>
+                <a href="{% url 'dashboard:tank_list' %}" 
+                   class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Connection Status -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 {% if tank.connection_status == 'connected' %}bg-green-500{% else %}bg-red-500{% endif %} rounded-md flex items-center justify-center">
+                            <i class="fas fa-{% if tank.connection_status == 'connected' %}wifi{% else %}wifi-slash{% endif %} text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Connection</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ tank.connection_status|title }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Water Level -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 {% if tank.current_water_level_percentage > 50 %}bg-green-500{% elif tank.current_water_level_percentage > 20 %}bg-yellow-500{% else %}bg-red-500{% endif %} rounded-md flex items-center justify-center">
+                            <i class="fas fa-tint text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Water Level</dt>
+                            <dd class="text-lg font-medium text-gray-900">
+                                {% if tank.current_water_level_percentage is not None %}
+                                    {{ tank.current_water_level_percentage|floatformat:1 }}%
+                                {% else %}
+                                    No Data
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Temperature -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                            <i class="fas fa-thermometer-half text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Temperature</dt>
+                            <dd class="text-lg font-medium text-gray-900">
+                                {% if latest_reading and latest_reading.water_temperature_f %}
+                                    {{ latest_reading.water_temperature_f|floatformat:1 }}°F
+                                {% else %}
+                                    No Data
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tank Status -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 {% if tank.status == 'active' %}bg-green-500{% elif tank.status == 'maintenance' %}bg-yellow-500{% else %}bg-red-500{% endif %} rounded-md flex items-center justify-center">
+                            <i class="fas fa-cog text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Status</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ tank.get_status_display }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Charts Section -->
+    {% if charts %}
+    <div class="space-y-6 mb-8">
+        <!-- Water Level Trend Chart -->
+        {% if charts.water_level %}
+        <div class="bg-white shadow rounded-lg p-6">
+            <div id="water-level-chart"></div>
+        </div>
+        {% endif %}
+
+        <!-- Multi-Parameter Chart -->
+        {% if charts.multi_param %}
+        <div class="bg-white shadow rounded-lg p-6">
+            <div id="multi-param-chart"></div>
+        </div>
+        {% endif %}
+
+        <!-- Temperature and pH Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {% if charts.temperature %}
+            <div class="bg-white shadow rounded-lg p-6">
+                <div id="temperature-chart"></div>
+            </div>
+            {% endif %}
+
+            {% if charts.ph_level %}
+            <div class="bg-white shadow rounded-lg p-6">
+                <div id="ph-level-chart"></div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Signal Strength Chart -->
+        {% if charts.signal_strength %}
+        <div class="bg-white shadow rounded-lg p-6">
+            <div id="signal-strength-chart"></div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Tank Information and Alerts -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Tank Details -->
+        <div class="lg:col-span-2 bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Tank Information</h3>
+            </div>
+            <div class="px-6 py-4">
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Borough</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ tank.get_borough_display }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Tank Type</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ tank.get_tank_type_display }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Capacity</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ tank.capacity_gallons|intcomma }} gallons</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Installation Date</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ tank.installation_date }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Building</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ tank.building_name|default:"N/A" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Owner</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ tank.building_owner|default:"N/A" }}</dd>
+                    </div>
+                    {% if tank.contact_email %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Contact Email</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ tank.contact_email }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if tank.contact_phone %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Contact Phone</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ tank.contact_phone }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        <!-- Active Alerts -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Active Alerts</h3>
+            </div>
+            <div class="divide-y divide-gray-200">
+                {% for alert in active_alerts %}
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                         {% if alert.severity == 'critical' %}bg-red-100 text-red-800
+                                         {% elif alert.severity == 'high' %}bg-orange-100 text-orange-800
+                                         {% elif alert.severity == 'medium' %}bg-yellow-100 text-yellow-800
+                                         {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                {{ alert.get_severity_display }}
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            {{ alert.created_at|naturaltime }}
+                        </div>
+                    </div>
+                    <p class="mt-2 text-sm font-medium text-gray-900">{{ alert.title }}</p>
+                    <p class="text-sm text-gray-500">{{ alert.message }}</p>
+                </div>
+                {% empty %}
+                <div class="px-6 py-4 text-center text-gray-500">
+                    No active alerts
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sensors -->
+    <div class="bg-white shadow rounded-lg mb-8">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Sensors</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Battery</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for sensor in sensors %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {{ sensor.get_sensor_type_display }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ sensor.model_number }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ sensor.serial_number }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                         {% if sensor.status == 'active' %}bg-green-100 text-green-800
+                                         {% elif sensor.status == 'maintenance' %}bg-yellow-100 text-yellow-800
+                                         {% elif sensor.status == 'low_battery' %}bg-orange-100 text-orange-800
+                                         {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ sensor.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if sensor.battery_level is not None %}
+                                {{ sensor.battery_level }}%
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Latest Reading -->
+    {% if latest_reading %}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Latest Reading</h3>
+            <p class="text-sm text-gray-500">{{ latest_reading.timestamp|naturaltime }}</p>
+        </div>
+        <div class="px-6 py-4">
+            <dl class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {% if latest_reading.water_level_percentage is not None %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Water Level</dt>
+                    <dd class="mt-1 text-lg font-semibold text-gray-900">{{ latest_reading.water_level_percentage|floatformat:1 }}%</dd>
+                </div>
+                {% endif %}
+                {% if latest_reading.water_temperature_f is not None %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Temperature</dt>
+                    <dd class="mt-1 text-lg font-semibold text-gray-900">{{ latest_reading.water_temperature_f|floatformat:1 }}°F</dd>
+                </div>
+                {% endif %}
+                {% if latest_reading.ph_level is not None %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">pH Level</dt>
+                    <dd class="mt-1 text-lg font-semibold text-gray-900">{{ latest_reading.ph_level|floatformat:2 }}</dd>
+                </div>
+                {% endif %}
+                {% if latest_reading.turbidity_ntu is not None %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Turbidity</dt>
+                    <dd class="mt-1 text-lg font-semibold text-gray-900">{{ latest_reading.turbidity_ntu|floatformat:2 }} NTU</dd>
+                </div>
+                {% endif %}
+                {% if latest_reading.dissolved_oxygen_ppm is not None %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Dissolved Oxygen</dt>
+                    <dd class="mt-1 text-lg font-semibold text-gray-900">{{ latest_reading.dissolved_oxygen_ppm|floatformat:1 }} ppm</dd>
+                </div>
+                {% endif %}
+                {% if latest_reading.conductivity_us_cm is not None %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Conductivity</dt>
+                    <dd class="mt-1 text-lg font-semibold text-gray-900">{{ latest_reading.conductivity_us_cm|floatformat:0 }} µS/cm</dd>
+                </div>
+                {% endif %}
+                {% if latest_reading.flow_rate_gpm is not None %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Flow Rate</dt>
+                    <dd class="mt-1 text-lg font-semibold text-gray-900">{{ latest_reading.flow_rate_gpm|floatformat:1 }} GPM</dd>
+                </div>
+                {% endif %}
+                {% if latest_reading.signal_strength is not None %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Signal Strength</dt>
+                    <dd class="mt-1 text-lg font-semibold text-gray-900">{{ latest_reading.signal_strength }}%</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 text-center">
+            <i class="fas fa-exclamation-triangle text-gray-400 text-4xl mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No Recent Data</h3>
+            <p class="text-gray-500">No sensor readings available for this tank.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if charts %}
+<script>
+    // Render Plotly charts for tank detail
+    {% if charts.water_level %}
+    Plotly.newPlot('water-level-chart', {{ charts.water_level|safe }});
+    {% endif %}
+    
+    {% if charts.multi_param %}
+    Plotly.newPlot('multi-param-chart', {{ charts.multi_param|safe }});
+    {% endif %}
+    
+    {% if charts.temperature %}
+    Plotly.newPlot('temperature-chart', {{ charts.temperature|safe }});
+    {% endif %}
+    
+    {% if charts.ph_level %}
+    Plotly.newPlot('ph-level-chart', {{ charts.ph_level|safe }});
+    {% endif %}
+    
+    {% if charts.signal_strength %}
+    Plotly.newPlot('signal-strength-chart', {{ charts.signal_strength|safe }});
+    {% endif %}
+</script>
+{% endif %}
+{% endblock %} 

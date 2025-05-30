@@ -1,0 +1,280 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block title %}Dashboard - Smart Water Tanks{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p class="mt-2 text-gray-600">Overview of your water tank monitoring system</p>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Tanks -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                            <i class="fas fa-tint text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Tanks</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ total_tanks }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Tanks -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                            <i class="fas fa-check-circle text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Active Tanks</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ active_tanks }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connected Tanks -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-indigo-500 rounded-md flex items-center justify-center">
+                            <i class="fas fa-wifi text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Connected</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ connected_tanks }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Alerts -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-red-500 rounded-md flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Active Alerts</dt>
+                            <dd class="text-lg font-medium text-gray-900">
+                                {{ active_alerts }}
+                                {% if critical_alerts > 0 %}
+                                <span class="text-sm text-red-600">({{ critical_alerts }} critical)</span>
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Charts Section -->
+    {% if charts %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Water Level Trends Chart -->
+        {% if charts.water_levels %}
+        <div class="bg-white shadow rounded-lg p-6 lg:col-span-2">
+            <div id="water-levels-chart"></div>
+        </div>
+        {% endif %}
+
+        <!-- Borough Distribution Pie Chart -->
+        {% if charts.borough_pie %}
+        <div class="bg-white shadow rounded-lg p-6">
+            <div id="borough-pie-chart"></div>
+        </div>
+        {% endif %}
+
+        <!-- Temperature Distribution -->
+        {% if charts.temperature_dist %}
+        <div class="bg-white shadow rounded-lg p-6">
+            <div id="temperature-dist-chart"></div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Alert Trends Chart -->
+    {% if charts.alerts_trend %}
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <div id="alerts-trend-chart"></div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- Charts and Data -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Borough Distribution -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Tanks by Borough</h3>
+            <div class="space-y-3">
+                {% for item in borough_data %}
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-gray-600">{{ item.borough|title }}</span>
+                    <div class="flex items-center">
+                        <div class="w-32 bg-gray-200 rounded-full h-2 mr-3">
+                            <div class="bg-blue-600 h-2 rounded-full" 
+                                 style="width: {% widthratio item.count total_tanks 100 %}%"></div>
+                        </div>
+                        <span class="text-sm font-medium text-gray-900">{{ item.count }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Tank Status Distribution -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Tank Status</h3>
+            <div class="space-y-3">
+                {% for item in status_data %}
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-gray-600">{{ item.status|title }}</span>
+                    <div class="flex items-center">
+                        <div class="w-32 bg-gray-200 rounded-full h-2 mr-3">
+                            <div class="{% if item.status == 'active' %}bg-green-600{% elif item.status == 'maintenance' %}bg-yellow-600{% elif item.status == 'offline' %}bg-gray-600{% else %}bg-red-600{% endif %} h-2 rounded-full" 
+                                 style="width: {% widthratio item.count total_tanks 100 %}%"></div>
+                        </div>
+                        <span class="text-sm font-medium text-gray-900">{{ item.count }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Alerts -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Recent Alerts</h3>
+        </div>
+        <div class="divide-y divide-gray-200">
+            {% for alert in recent_alerts %}
+            <div class="px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-2 h-2 rounded-full {% if alert.severity == 'critical' %}bg-red-600{% elif alert.severity == 'high' %}bg-orange-500{% elif alert.severity == 'medium' %}bg-yellow-500{% else %}bg-blue-500{% endif %}"></div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-900">{{ alert.title }}</p>
+                            <p class="text-sm text-gray-500">{{ alert.tank.name }} - {{ alert.created_at|naturaltime }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if alert.severity == 'critical' %}bg-red-100 text-red-800{% elif alert.severity == 'high' %}bg-orange-100 text-orange-800{% elif alert.severity == 'medium' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                            {{ alert.get_severity_display }}
+                        </span>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if alert.status == 'active' %}bg-red-100 text-red-800{% elif alert.status == 'acknowledged' %}bg-yellow-100 text-yellow-800{% else %}bg-green-100 text-green-800{% endif %}">
+                            {{ alert.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="px-6 py-8 text-center">
+                <i class="fas fa-check-circle text-green-500 text-3xl mb-2"></i>
+                <p class="text-gray-500">No recent alerts</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% if recent_alerts %}
+        <div class="px-6 py-3 bg-gray-50 text-right">
+            <a href="{% url 'dashboard:alerts' %}" class="text-sm font-medium text-blue-600 hover:text-blue-500">
+                View all alerts <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="mt-8">
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <a href="{% url 'dashboard:tank_list' %}" 
+                   class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-list text-blue-600 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-900">View All Tanks</p>
+                        <p class="text-sm text-gray-500">Monitor tank status and levels</p>
+                    </div>
+                </a>
+                
+                <a href="{% url 'dashboard:alerts' %}" 
+                   class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-900">Manage Alerts</p>
+                        <p class="text-sm text-gray-500">Review and resolve alerts</p>
+                    </div>
+                </a>
+                
+                <a href="{% url 'admin:index' %}" 
+                   class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-cog text-gray-600 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-900">System Admin</p>
+                        <p class="text-sm text-gray-500">Configure system settings</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if charts %}
+<script>
+    // Render Plotly charts
+    {% if charts.water_levels %}
+    Plotly.newPlot('water-levels-chart', {{ charts.water_levels|safe }});
+    {% endif %}
+    
+    {% if charts.borough_pie %}
+    Plotly.newPlot('borough-pie-chart', {{ charts.borough_pie|safe }});
+    {% endif %}
+    
+    {% if charts.temperature_dist %}
+    Plotly.newPlot('temperature-dist-chart', {{ charts.temperature_dist|safe }});
+    {% endif %}
+    
+    {% if charts.alerts_trend %}
+    Plotly.newPlot('alerts-trend-chart', {{ charts.alerts_trend|safe }});
+    {% endif %}
+</script>
+{% endif %}
+{% endblock %} 

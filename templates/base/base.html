@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Smart Water Tanks{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Plotly.js for advanced charts -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-blue-600 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <a href="{% url 'dashboard:home' %}" class="text-white text-xl font-bold">
+                            <i class="fas fa-tint mr-2"></i>Smart Water Tanks
+                        </a>
+                    </div>
+                    {% if user.is_authenticated %}
+                    <div class="hidden md:block ml-10">
+                        <div class="flex items-baseline space-x-4">
+                            <a href="{% url 'dashboard:home' %}" 
+                               class="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium">
+                                <i class="fas fa-tachometer-alt mr-1"></i>Dashboard
+                            </a>
+                            <a href="{% url 'dashboard:tank_list' %}" 
+                               class="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium">
+                                <i class="fas fa-list mr-1"></i>Tanks
+                            </a>
+                            <a href="{% url 'dashboard:alerts' %}" 
+                               class="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>Alerts
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if user.is_authenticated %}
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <button class="text-white hover:text-gray-300 focus:outline-none focus:text-gray-300" 
+                                onclick="toggleDropdown()">
+                            <i class="fas fa-user-circle mr-1"></i>
+                            {{ user.get_full_name|default:user.username }}
+                            <i class="fas fa-chevron-down ml-1"></i>
+                        </button>
+                        <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                            <a href="{% url 'accounts:profile' %}" 
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-user mr-2"></i>Profile
+                            </a>
+                            {% if user.is_staff %}
+                            <a href="{% url 'admin:index' %}" 
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-cog mr-2"></i>Admin
+                            </a>
+                            {% endif %}
+                            <div class="border-t border-gray-100"></div>
+                            <a href="{% url 'accounts:logout' %}" 
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'accounts:login' %}" 
+                       class="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium">
+                        Login
+                    </a>
+                    <a href="{% url 'accounts:register' %}" 
+                       class="bg-blue-500 hover:bg-blue-400 text-white px-3 py-2 rounded-md text-sm font-medium">
+                        Register
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} bg-{% if message.tags == 'error' %}red{% elif message.tags == 'warning' %}yellow{% elif message.tags == 'success' %}green{% else %}blue{% endif %}-100 border border-{% if message.tags == 'error' %}red{% elif message.tags == 'warning' %}yellow{% elif message.tags == 'success' %}green{% else %}blue{% endif %}-400 text-{% if message.tags == 'error' %}red{% elif message.tags == 'warning' %}yellow{% elif message.tags == 'success' %}green{% else %}blue{% endif %}-700 px-4 py-3 rounded mb-4">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white mt-12">
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Smart Water Tanks</h3>
+                    <p class="text-gray-300">
+                        Monitoring NYC water tanks with real-time sensor data and intelligent alerts.
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Quick Links</h3>
+                    <ul class="space-y-2">
+                        <li><a href="{% url 'dashboard:home' %}" class="text-gray-300 hover:text-white">Dashboard</a></li>
+                        <li><a href="{% url 'dashboard:tank_list' %}" class="text-gray-300 hover:text-white">Water Tanks</a></li>
+                        <li><a href="{% url 'dashboard:alerts' %}" class="text-gray-300 hover:text-white">Alerts</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Contact</h3>
+                    <p class="text-gray-300">
+                        For support and inquiries, please contact our technical team.
+                    </p>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center">
+                <p class="text-gray-300">&copy; 2024 Smart Water Tanks. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function toggleDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('userDropdown');
+            const button = event.target.closest('button');
+            
+            if (!button || !button.onclick) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

@@ -1,0 +1,232 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block title %}Water Tanks - Smart Water Tanks{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Water Tanks</h1>
+        <p class="mt-2 text-gray-600">Monitor and manage all water tanks in the system</p>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <form method="get" class="space-y-4 md:space-y-0 md:flex md:items-end md:space-x-4">
+            <!-- Search -->
+            <div class="flex-1">
+                <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
+                <input type="text" name="search" id="search" 
+                       value="{{ current_filters.search }}"
+                       placeholder="Search by name, location, or building..."
+                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <!-- Borough Filter -->
+            <div>
+                <label for="borough" class="block text-sm font-medium text-gray-700">Borough</label>
+                <select name="borough" id="borough" 
+                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <option value="">All Boroughs</option>
+                    {% for value, label in borough_choices %}
+                    <option value="{{ value }}" {% if current_filters.borough == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+                <select name="status" id="status" 
+                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Connection Filter -->
+            <div>
+                <label for="connection" class="block text-sm font-medium text-gray-700">Connection</label>
+                <select name="connection" id="connection" 
+                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <option value="">All</option>
+                    <option value="connected" {% if current_filters.connection == 'connected' %}selected{% endif %}>
+                        Connected
+                    </option>
+                    <option value="disconnected" {% if current_filters.connection == 'disconnected' %}selected{% endif %}>
+                        Disconnected
+                    </option>
+                </select>
+            </div>
+
+            <!-- Submit Button -->
+            <div>
+                <button type="submit" 
+                        class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    <i class="fas fa-search mr-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tank Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for tank in tanks %}
+        <div class="bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+            <div class="p-6">
+                <!-- Tank Header -->
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900 truncate">{{ tank.name }}</h3>
+                    <div class="flex space-x-2">
+                        <!-- Connection Status -->
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                     {% if tank.connection_status == 'connected' %}bg-green-100 text-green-800
+                                     {% else %}bg-red-100 text-red-800{% endif %}">
+                            <i class="fas fa-{% if tank.connection_status == 'connected' %}wifi{% else %}wifi-slash{% endif %} mr-1"></i>
+                            {{ tank.connection_status|title }}
+                        </span>
+                        
+                        <!-- Tank Status -->
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                     {% if tank.status == 'active' %}bg-green-100 text-green-800
+                                     {% elif tank.status == 'maintenance' %}bg-yellow-100 text-yellow-800
+                                     {% elif tank.status == 'offline' %}bg-gray-100 text-gray-800
+                                     {% else %}bg-red-100 text-red-800{% endif %}">
+                            {{ tank.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Tank Info -->
+                <div class="space-y-2 mb-4">
+                    <p class="text-sm text-gray-600">
+                        <i class="fas fa-map-marker-alt mr-2"></i>{{ tank.location }}
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        <i class="fas fa-building mr-2"></i>{{ tank.get_borough_display }}
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        <i class="fas fa-tint mr-2"></i>{{ tank.capacity_gallons|intcomma }} gallons
+                    </p>
+                </div>
+
+                <!-- Water Level -->
+                {% if tank.current_water_level_percentage is not None %}
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium text-gray-700">Water Level</span>
+                        <span class="text-sm font-medium text-gray-900">{{ tank.current_water_level_percentage|floatformat:1 }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="{% if tank.current_water_level_percentage > 50 %}bg-green-600{% elif tank.current_water_level_percentage > 20 %}bg-yellow-600{% else %}bg-red-600{% endif %} h-2 rounded-full" 
+                             style="width: {{ tank.current_water_level_percentage }}%"></div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="mb-4">
+                    <span class="text-sm text-gray-500">No recent water level data</span>
+                </div>
+                {% endif %}
+
+                <!-- Latest Reading -->
+                {% if tank.latest_sensor_data %}
+                <div class="text-xs text-gray-500 mb-4">
+                    Last reading: {{ tank.latest_sensor_data.timestamp|naturaltime }}
+                </div>
+                {% endif %}
+
+                <!-- Actions -->
+                <div class="flex space-x-2">
+                    <a href="{% url 'dashboard:tank_detail' tank.pk %}" 
+                       class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-eye mr-1"></i>View Details
+                    </a>
+                    <a href="{% url 'dashboard:export_tank_data' tank.pk %}" 
+                       class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-download"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full">
+            <div class="text-center py-12">
+                <i class="fas fa-tint text-gray-400 text-4xl mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No tanks found</h3>
+                <p class="text-gray-500">Try adjusting your search criteria or filters.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="mt-8 flex items-center justify-between">
+        <div class="flex-1 flex justify-between sm:hidden">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}" 
+               class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Previous
+            </a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" 
+               class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Next
+            </a>
+            {% endif %}
+        </div>
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm text-gray-700">
+                    Showing
+                    <span class="font-medium">{{ page_obj.start_index }}</span>
+                    to
+                    <span class="font-medium">{{ page_obj.end_index }}</span>
+                    of
+                    <span class="font-medium">{{ page_obj.paginator.count }}</span>
+                    results
+                </p>
+            </div>
+            <div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" 
+                       class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
+                        {{ num }}
+                    </span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}" 
+                       class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        {{ num }}
+                    </a>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" 
+                       class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 
