@@ -1,2 +1,2 @@
-web: gunicorn smart_water_tanks.wsgi --log-file -
+web: gunicorn smart_water_tanks.wsgi:application --bind 0.0.0.0:$PORT
 release: python manage.py migrate && python manage.py populate_sample_data 

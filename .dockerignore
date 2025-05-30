@@ -1,0 +1,13 @@
+venv/
+.env
+.git/
+.gitignore
+README.md
+DEPLOYMENT.md
+db.sqlite3
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store 
